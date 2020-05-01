@@ -31,7 +31,7 @@ namespace netDxf.Entities
     /// Represents the base class for a dimension <see cref="EntityObject">entity</see>.
     /// </summary>
     /// <reamarks>
-    /// Once a dimension is added to the dxf document, its properties should not be modified or the changes will not be reflected in the saved dxf file.
+    /// Once a dimension is added to the DXF document, its properties should not be modified or the changes will not be reflected in the saved DXF file.
     /// </reamarks>
     public abstract class Dimension :
         EntityObject
@@ -313,7 +313,7 @@ namespace netDxf.Entities
         /// <summary>
         /// Calculate the dimension reference points.
         /// </summary>
-        protected abstract void CalculteReferencePoints();
+        protected abstract void CalculateReferencePoints();
 
         /// <summary>
         /// Gets the block that contains the entities that make up the dimension picture.
@@ -334,7 +334,7 @@ namespace netDxf.Entities
         /// </remarks>
         public void Update()
         {
-            this.CalculteReferencePoints();
+            this.CalculateReferencePoints();
 
             if (this.block != null)
             {

@@ -1,4 +1,4 @@
-#region netDxf library, Copyright (C) 2009-2019 Daniel Carvajal (haplokuon@gmail.com)
+#region netDxf library, Copyright (C) 2009-2020 Daniel Carvajal (haplokuon@gmail.com)
 
 //                        netDxf library
 // Copyright (C) 2009-2019 Daniel Carvajal (haplokuon@gmail.com)
@@ -40,24 +40,24 @@ namespace netDxf.Entities
             private static double[] CoefficientsLine(Vector2 p1, Vector2 p2)
             {
                 // line: A*x + B*y + C = 0
-                double[] coeficients = new double[3];
-                coeficients[0] = p1.Y - p2.Y; //A
-                coeficients[1] = p2.X - p1.X; //B
-                coeficients[2] = p1.X * p2.Y - p2.X * p1.Y; //C
-                return coeficients;
+                double[] coefficients = new double[3];
+                coefficients[0] = p1.Y - p2.Y; //A
+                coefficients[1] = p2.X - p1.X; //B
+                coefficients[2] = p1.X * p2.Y - p2.X * p1.Y; //C
+                return coefficients;
             }
 
             private static double[] CoefficientsProductLines(double[] l1, double[] l2)
             {
                 // lines product: A*x2 + B*xy + C*y2 + D*x + E*y + F = 0
-                double[] coeficients = new double[6];
-                coeficients[0] = l1[0] * l2[0]; //A
-                coeficients[1] = l1[0] * l2[1] + l1[1] * l2[0]; //B
-                coeficients[2] = l1[1] * l2[1]; //C
-                coeficients[3] = l1[0] * l2[2] + l1[2] * l2[0]; //D
-                coeficients[4] = l1[1] * l2[2] + l1[2] * l2[1]; //E
-                coeficients[5] = l1[2] * l2[2]; //F
-                return coeficients;
+                double[] coefficients = new double[6];
+                coefficients[0] = l1[0] * l2[0]; //A
+                coefficients[1] = l1[0] * l2[1] + l1[1] * l2[0]; //B
+                coefficients[2] = l1[1] * l2[1]; //C
+                coefficients[3] = l1[0] * l2[2] + l1[2] * l2[0]; //D
+                coefficients[4] = l1[1] * l2[2] + l1[2] * l2[1]; //E
+                coefficients[5] = l1[2] * l2[2]; //F
+                return coefficients;
             }
 
             private static double Lambda(double[] alpha_beta, double[] gamma_delta, Vector2 p)
@@ -87,26 +87,26 @@ namespace netDxf.Entities
 
             private static double[] ConicCoefficients(Vector2 point1, Vector2 point2, Vector2 point3, Vector2 point4, Vector2 point5)
             {
-                double[] line_alpha = CoefficientsLine(point1, point2);
-                double[] line_beta = CoefficientsLine(point3, point4);
-                double[] line_gamma = CoefficientsLine(point1, point3);
-                double[] line_delta = CoefficientsLine(point2, point4);
+                double[] lineAlpha = CoefficientsLine(point1, point2);
+                double[] lineBeta = CoefficientsLine(point3, point4);
+                double[] lineGamma = CoefficientsLine(point1, point3);
+                double[] lineDelta = CoefficientsLine(point2, point4);
 
-                double[] alpha_beta = CoefficientsProductLines(line_alpha, line_beta);
-                double[] gamma_delta = CoefficientsProductLines(line_gamma, line_delta);
+                double[] alphaBeta = CoefficientsProductLines(lineAlpha, lineBeta);
+                double[] gammaDelta = CoefficientsProductLines(lineGamma, lineDelta);
 
-                double lambda = Lambda(alpha_beta, gamma_delta, point5);
+                double lambda = Lambda(alphaBeta, gammaDelta, point5);
                 if (double.IsNaN(lambda)) return null; // conic coefficients cannot be found, duplicate points
 
-                double[] coeficients = new double[6];
-                coeficients[0] = alpha_beta[0] + lambda * gamma_delta[0];          
-                coeficients[1] = alpha_beta[1] + lambda * gamma_delta[1];
-                coeficients[2] = alpha_beta[2] + lambda * gamma_delta[2];
-                coeficients[3] = alpha_beta[3] + lambda * gamma_delta[3];
-                coeficients[4] = alpha_beta[4] + lambda * gamma_delta[4];
-                coeficients[5] = alpha_beta[5] + lambda * gamma_delta[5];
+                double[] coefficients = new double[6];
+                coefficients[0] = alphaBeta[0] + lambda * gammaDelta[0];          
+                coefficients[1] = alphaBeta[1] + lambda * gammaDelta[1];
+                coefficients[2] = alphaBeta[2] + lambda * gammaDelta[2];
+                coefficients[3] = alphaBeta[3] + lambda * gammaDelta[3];
+                coefficients[4] = alphaBeta[4] + lambda * gammaDelta[4];
+                coefficients[5] = alphaBeta[5] + lambda * gammaDelta[5];
 
-                return coeficients;
+                return coefficients;
             }
 
             public static bool EllipseProperties(Vector2 point1, Vector2 point2, Vector2 point3, Vector2 point4, Vector2 point5, out Vector2 center, out double semiMajorAxis, out double semiMinorAxis, out double rotation)
@@ -116,15 +116,15 @@ namespace netDxf.Entities
                 semiMinorAxis = double.NaN;
                 rotation = double.NaN;
 
-                double[] coeficients = ConicCoefficients(point1, point2, point3, point4, point5);
-                if(coeficients == null) return false;
+                double[] coefficients = ConicCoefficients(point1, point2, point3, point4, point5);
+                if(coefficients == null) return false;
 
-                double a = coeficients[0];
-                double b = coeficients[1];
-                double c = coeficients[2];
-                double d = coeficients[3];
-                double e = coeficients[4];
-                double f = coeficients[5];
+                double a = coefficients[0];
+                double b = coefficients[1];
+                double c = coefficients[2];
+                double d = coefficients[3];
+                double e = coefficients[4];
+                double f = coefficients[5];
 
                 double q = b * b - 4 * a * c;
                            
@@ -142,9 +142,13 @@ namespace netDxf.Entities
                 {
                     // ellipse parallel to world axis
                     if (MathHelper.IsEqual(a, c))
+                    {
                         rotation = 0.0;
+                    }
                     else
+                    {
                         rotation = a < c ? 0.0 : MathHelper.HalfPI;
+                    }
                 }
                 else
                 {
@@ -325,17 +329,17 @@ namespace netDxf.Entities
         /// <returns>A local point on the ellipse for the given angle relative to the center.</returns>
         public Vector2 PolarCoordinateRelativeToCenter(double angle)
         {
-            double a = this.MajorAxis*0.5;
-            double b = this.MinorAxis*0.5;
-            double radians = angle*MathHelper.DegToRad;
+            double a = this.MajorAxis * 0.5;
+            double b = this.MinorAxis * 0.5;
+            double radians = angle * MathHelper.DegToRad;
 
-            double a1 = a*Math.Sin(radians);
-            double b1 = b*Math.Cos(radians);
+            double a1 = a * Math.Sin(radians);
+            double b1 = b * Math.Cos(radians);
 
-            double radius = (a*b)/Math.Sqrt(b1*b1 + a1*a1);
+            double radius = (a * b) / Math.Sqrt(b1 * b1 + a1 * a1);
 
-            // convert the radius back to cartesian coordinates
-            return new Vector2(radius*Math.Cos(radians), radius*Math.Sin(radians));
+            // convert the radius back to Cartesian coordinates
+            return new Vector2(radius * Math.Cos(radians), radius * Math.Sin(radians));
         }
 
         /// <summary>
@@ -347,8 +351,8 @@ namespace netDxf.Entities
         {
             List<Vector2> points = new List<Vector2>();
             double beta = this.rotation * MathHelper.DegToRad;
-            double sinbeta = Math.Sin(beta);
-            double cosbeta = Math.Cos(beta);
+            double sinBeta = Math.Sin(beta);
+            double cosBeta = Math.Cos(beta);
             double start;
             double end;
             double steps;
@@ -377,11 +381,11 @@ namespace netDxf.Entities
             for (int i = 0; i < precision; i++)
             {
                 double angle = start + delta*i;
-                double sinalpha = Math.Sin(angle);
-                double cosalpha = Math.Cos(angle);
+                double sinAlpha = Math.Sin(angle);
+                double cosAlpha = Math.Cos(angle);
 
-                double pointX = 0.5 * (this.majorAxis * cosalpha * cosbeta - this.minorAxis * sinalpha * sinbeta);
-                double pointY = 0.5 * (this.majorAxis * cosalpha * sinbeta + this.minorAxis * sinalpha * cosbeta);
+                double pointX = 0.5 * (this.majorAxis * cosAlpha * cosBeta - this.minorAxis * sinAlpha * sinBeta);
+                double pointY = 0.5 * (this.majorAxis * cosAlpha * sinBeta + this.minorAxis * sinAlpha * cosBeta);
 
                 points.Add(new Vector2(pointX, pointY));
             }
@@ -396,7 +400,7 @@ namespace netDxf.Entities
         /// <returns>A new instance of <see cref="LwPolyline">LightWeightPolyline</see> that represents the ellipse.</returns>
         public LwPolyline ToPolyline(int precision)
         {
-            IEnumerable<Vector2> vertexes = this.PolygonalVertexes(precision);
+            List<Vector2> vertexes = this.PolygonalVertexes(precision);
             Vector3 ocsCenter = MathHelper.Transform(this.center, this.Normal, CoordinateSystem.World, CoordinateSystem.Object);
             LwPolyline poly = new LwPolyline
             {
@@ -444,11 +448,11 @@ namespace netDxf.Entities
             Vector2 p4 = new Vector2(semiMajorAxis, -semiMinorAxis);
             List<Vector2> ocsPoints = MathHelper.Transform(new[] {p1, p2, p3, p4}, this.Rotation * MathHelper.DegToRad, CoordinateSystem.Object, CoordinateSystem.World);
 
-            Vector3 p1prime = new Vector3(ocsPoints[0].X, ocsPoints[0].Y, 0.0);
-            Vector3 p2prime = new Vector3(ocsPoints[1].X, ocsPoints[1].Y, 0.0);
-            Vector3 p3prime = new Vector3(ocsPoints[2].X, ocsPoints[2].Y, 0.0);
-            Vector3 p4prime = new Vector3(ocsPoints[3].X, ocsPoints[3].Y, 0.0);
-            List<Vector3> wcsPoints = MathHelper.Transform(new[] {p1prime, p2prime, p3prime, p4prime}, this.Normal, CoordinateSystem.Object, CoordinateSystem.World);
+            Vector3 p1Prime = new Vector3(ocsPoints[0].X, ocsPoints[0].Y, 0.0);
+            Vector3 p2Prime = new Vector3(ocsPoints[1].X, ocsPoints[1].Y, 0.0);
+            Vector3 p3Prime = new Vector3(ocsPoints[2].X, ocsPoints[2].Y, 0.0);
+            Vector3 p4Prime = new Vector3(ocsPoints[3].X, ocsPoints[3].Y, 0.0);
+            List<Vector3> wcsPoints = MathHelper.Transform(new[] {p1Prime, p2Prime, p3Prime, p4Prime}, this.Normal, CoordinateSystem.Object, CoordinateSystem.World);
             for (int i = 0; i < wcsPoints.Count; i++)
             {
                 wcsPoints[i] += this.Center;
@@ -495,8 +499,8 @@ namespace netDxf.Entities
             }
             
             Vector3 oldNormal = this.Normal;
-            double oldRotation = this.Rotation;
-
+            double oldRotation = this.Rotation * MathHelper.DegToRad;
+            
             Vector2 newCenter;
             double newSemiMajorAxis;
             double newSemiMinorAxis;
@@ -526,37 +530,33 @@ namespace netDxf.Entities
             //if not full ellipse calculate start and end angles
             Vector2 start = this.PolarCoordinateRelativeToCenter(this.StartAngle);
             Vector2 end = this.PolarCoordinateRelativeToCenter(this.EndAngle);
+            start = Vector2.Rotate(start, oldRotation);
+            end = Vector2.Rotate(end, oldRotation);
 
-            if (!MathHelper.IsZero(this.Rotation))
+            Vector3 wcsStart = MathHelper.Transform(new Vector3(start.X, start.Y, 0.0), oldNormal, CoordinateSystem.Object, CoordinateSystem.World);
+            wcsStart = transformation * wcsStart;
+
+            Vector3 wcsEnd = MathHelper.Transform(new Vector3(end.X, end.Y, 0.0), oldNormal, CoordinateSystem.Object, CoordinateSystem.World);
+            wcsEnd = transformation * wcsEnd;
+
+            Vector3 ocsStart = MathHelper.Transform(wcsStart, newNormal, CoordinateSystem.World, CoordinateSystem.Object);
+            Vector3 ocsEnd = MathHelper.Transform(wcsEnd, newNormal, CoordinateSystem.World, CoordinateSystem.Object);
+
+            Vector2 newStart = new Vector2(ocsStart.X, ocsStart.Y);
+            Vector2 newEnd = new Vector2(ocsEnd.X, ocsEnd.Y);
+            newStart = Vector2.Rotate(newStart, -newRotation);
+            newEnd = Vector2.Rotate(newEnd, -newRotation);
+
+            if (Math.Sign(transformation.M11 * transformation.M22 * transformation.M33) < 0)
             {
-                double beta = oldRotation * MathHelper.DegToRad;
-                double sinbeta = Math.Sin(beta);
-                double cosbeta = Math.Cos(beta);
-
-                start = new Vector2(start.X * cosbeta - start.Y * sinbeta, start.X * sinbeta + start.Y * cosbeta);
-                end = new Vector2(end.X * cosbeta - end.Y * sinbeta, end.X * sinbeta + end.Y * cosbeta);
+                this.EndAngle = Vector2.Angle(newStart) * MathHelper.RadToDeg;
+                this.StartAngle = Vector2.Angle(newEnd) * MathHelper.RadToDeg;
             }
-
-            Vector3 pStart = new Vector3(start.X, start.Y, 0.0);
-            Vector3 pEnd = new Vector3(end.X, end.Y, 0.0);
-
-            List<Vector3> wcsAnglePoints = MathHelper.Transform(new[] {pStart, pEnd}, oldNormal, CoordinateSystem.Object, CoordinateSystem.World);
-            for (int i = 0; i < wcsAnglePoints.Count; i++)
+            else
             {
-                wcsPoints[i] += this.Center;
-
-                wcsAnglePoints[i] = transformation * wcsAnglePoints[i];
-                wcsPoints[i] += translation;
+                this.StartAngle = Vector2.Angle(newStart) * MathHelper.RadToDeg;
+                this.EndAngle = Vector2.Angle(newEnd) * MathHelper.RadToDeg;
             }
-
-            List<Vector3> ocsAnglePoints = MathHelper.Transform(wcsAnglePoints, newNormal, CoordinateSystem.World, CoordinateSystem.Object);
-
-            Vector2 newStart = new Vector2(ocsAnglePoints[0].X, ocsAnglePoints[0].Y);
-            Vector2 newEnd = new Vector2(ocsAnglePoints[1].X, ocsAnglePoints[1].Y);
-
-            double invert = Math.Sign(transformation.M11 * transformation.M22 * transformation.M33) < 0 ? 180.0 : 0.0;
-            this.StartAngle = invert + Vector2.Angle(newStart) * MathHelper.RadToDeg - this.Rotation;
-            this.EndAngle = invert + Vector2.Angle(newEnd) * MathHelper.RadToDeg - this.Rotation;
         }
 
         /// <summary>

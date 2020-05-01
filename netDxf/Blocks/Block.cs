@@ -1,7 +1,7 @@
-#region netDxf library, Copyright (C) 2009-2019 Daniel Carvajal (haplokuon@gmail.com)
+#region netDxf library, Copyright (C) 2009-2020 Daniel Carvajal (haplokuon@gmail.com)
 
 //                        netDxf library
-// Copyright (C) 2009-2019 Daniel Carvajal (haplokuon@gmail.com)
+// Copyright (C) 2009-2020 Daniel Carvajal (haplokuon@gmail.com)
 // 
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -284,6 +284,13 @@ namespace netDxf.Blocks
         /// <summary>
         /// Gets or sets the block description.
         /// </summary>
+        /// <remarks>
+        /// AutoCAD has an unknown limit on the number of characters for the description when loading an external DXF,
+        /// while, on the other hand is perfectly capable of saving a Block description that surpasses such limit.<br />
+        /// Keep in mind that when saving a DXF prior to the AutoCad2007 version, non-ASCII characters will be encoded,
+        /// therefore a single letter might consume more characters when saved into the DXF.<br />
+        /// New line characters are not allowed.
+        /// </remarks>
         public string Description
         {
             get { return this.description; }
@@ -379,7 +386,7 @@ namespace netDxf.Blocks
         /// </summary>
         public bool IsForInternalUseOnly
         {
-            get { return this.Name.StartsWith("*"); }
+            get { return this.forInternalUse; }
         }
 
         #endregion
@@ -637,16 +644,16 @@ namespace netDxf.Blocks
         /// Some objects might consume more than one, is, for example, the case of polylines that will assign
         /// automatically a handle to its vertexes. The entity number will be converted to an hexadecimal number.
         /// </remarks>
-        internal override long AsignHandle(long entityNumber)
+        internal override long AssignHandle(long entityNumber)
         {
-            entityNumber = this.Owner.AsignHandle(entityNumber);
-            entityNumber = this.end.AsignHandle(entityNumber);
+            entityNumber = this.Owner.AssignHandle(entityNumber);
+            entityNumber = this.end.AssignHandle(entityNumber);
             foreach (AttributeDefinition attdef in this.attributes.Values)
             {
-                entityNumber = attdef.AsignHandle(entityNumber);
+                entityNumber = attdef.AssignHandle(entityNumber);
             }
 
-            return base.AsignHandle(entityNumber);
+            return base.AssignHandle(entityNumber);
         }
 
         #endregion

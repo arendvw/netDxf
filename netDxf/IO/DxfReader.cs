@@ -1,7 +1,7 @@
-﻿#region netDxf library, Copyright (C) 2009-2019 Daniel Carvajal (haplokuon@gmail.com)
+﻿#region netDxf library, Copyright (C) 2009-2020 Daniel Carvajal (haplokuon@gmail.com)
 
 //                        netDxf library
-// Copyright (C) 2009-2019 Daniel Carvajal (haplokuon@gmail.com)
+// Copyright (C) 2009-2020 Daniel Carvajal (haplokuon@gmail.com)
 // 
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -65,8 +65,8 @@ namespace netDxf.IO
         private Dictionary<Viewport, string> viewports;
 
         private Dictionary<Hatch, List<HatchBoundaryPath>> hatchToPaths;
-        // HatchBoundaryPaths, they will be processed at the end <Entity: HatchBoundaryPath, string: entity contourn handle>.
-        private Dictionary<HatchBoundaryPath, List<string>> hatchContourns;
+        // HatchBoundaryPaths, they will be processed at the end <Entity: HatchBoundaryPath, string: entity contour handle>.
+        private Dictionary<HatchBoundaryPath, List<string>> hatchContours;
 
         // in nested blocks (blocks that contains Insert entities) the block definition might be defined AFTER the block that references them
         // temporarily these variables will store information to post process the nested block list
@@ -150,15 +150,19 @@ namespace netDxf.IO
                     Encoding encoding;
 
                     if (version >= DxfVersion.AutoCad2007)
+                    {
                         encoding = Encoding.UTF8;
+                    }
                     else
                     {
                         if (string.IsNullOrEmpty(dwgcodepage))
-                            encoding = Encoding.GetEncoding(Encoding.Default.WindowsCodePage); // use the default windows code page, if unable to read the code page header variable.
+                        {
+                            encoding = Encoding.GetEncoding(Encoding.ASCII.WindowsCodePage); // use the default windows code page, if unable to read the code page header variable.
+                        }
                         else
                         {
                             int codepage;
-                            encoding = Encoding.GetEncoding(int.TryParse(dwgcodepage.Split('_')[1], out codepage) ? codepage : Encoding.Default.WindowsCodePage);
+                            encoding = Encoding.GetEncoding(int.TryParse(dwgcodepage.Split('_')[1], out codepage) ? codepage : Encoding.ASCII.WindowsCodePage);
                         }
                     }
                     this.chunk = new BinaryCodeValueReader(new BinaryReader(stream), encoding);
@@ -169,21 +173,25 @@ namespace netDxf.IO
                     Encoding encodingType = EncodingType.GetType(stream);
                     stream.Position = startPosition;
 
-                    bool isUnicode = (encodingType.EncodingName == Encoding.UTF8.EncodingName) ||
-                                     (encodingType.EncodingName == Encoding.BigEndianUnicode.EncodingName) ||
-                                     (encodingType.EncodingName == Encoding.Unicode.EncodingName);
+                    bool isUnicode = encodingType.EncodingName == Encoding.UTF8.EncodingName ||
+                                     encodingType.EncodingName == Encoding.BigEndianUnicode.EncodingName ||
+                                     encodingType.EncodingName == Encoding.Unicode.EncodingName;
 
                     if (isUnicode)
+                    {
                         encoding = Encoding.UTF8;
+                    }
                     else
                     {
                         // if the file is not UTF-8 use the code page provided by the DXF file
                         if (string.IsNullOrEmpty(dwgcodepage))
-                            encoding = Encoding.GetEncoding(Encoding.Default.WindowsCodePage); // use the default windows code page, if unable to read the code page header variable.
+                        {
+                            encoding = Encoding.GetEncoding(Encoding.ASCII.WindowsCodePage); // use the default windows code page, if unable to read the code page header variable.
+                        }
                         else
                         {
                             int codepage;
-                            encoding = Encoding.GetEncoding(!int.TryParse(dwgcodepage.Split('_')[1], out codepage) ? Encoding.Default.WindowsCodePage : codepage);
+                            encoding = Encoding.GetEncoding(!int.TryParse(dwgcodepage.Split('_')[1], out codepage) ? Encoding.ASCII.WindowsCodePage : codepage);
                         }
                     }
                     this.chunk = new TextCodeValueReader(new StreamReader(stream, encoding, true));
@@ -199,7 +207,7 @@ namespace netDxf.IO
             this.entityList = new Dictionary<DxfObject, string>();
             this.viewports = new Dictionary<Viewport, string>();
             this.hatchToPaths = new Dictionary<Hatch, List<HatchBoundaryPath>>();
-            this.hatchContourns = new Dictionary<HatchBoundaryPath, List<string>>();
+            this.hatchContours = new Dictionary<HatchBoundaryPath, List<string>>();
             this.decodedStrings = new Dictionary<string, string>();
             this.leaderAnnotation = new Dictionary<Leader, string>();
 
@@ -316,7 +324,9 @@ namespace netDxf.IO
             byte[] sentinel = reader.ReadBytes(22);
             StringBuilder sb = new StringBuilder(18);
             for (int i = 0; i < 18; i++)
+            {
                 sb.Append((char) sentinel[i]);
+            }
 
             return sb.ToString() == "AutoCAD Binary DXF";
         }
@@ -329,9 +339,13 @@ namespace netDxf.IO
             stream.Position = startPosition;
 
             if (isBinary)
+            {
                 chunk = new BinaryCodeValueReader(new BinaryReader(stream), Encoding.ASCII);
+            }
             else
+            {
                 chunk = new TextCodeValueReader(new StreamReader(stream));
+            }
 
             chunk.Next();
             while (chunk.ReadString() != DxfObjectCode.EndOfFile)
@@ -347,12 +361,13 @@ namespace netDxf.IO
 
                         if (varName == headerVariable)
                         {
-                            // we found the variable we are looking for
-                            return chunk.ReadString();
+                            return chunk.ReadString(); // we found the variable we are looking for
                         }
                         // some header variables have more than one entry
                         while (chunk.Code != 0 && chunk.Code != 9)
+                        {
                             chunk.Next();
+                        }
                     }
                     // we only need to read the header section
                     return null;
@@ -443,25 +458,33 @@ namespace netDxf.IO
                     case HeaderVariableCode.CMLStyle:
                         string mLineStyleName = this.DecodeEncodedNonAsciiCharacters(this.chunk.ReadString());
                         if (!string.IsNullOrEmpty(mLineStyleName))
+                        {
                             this.doc.DrawingVariables.CMLStyle = mLineStyleName;
+                        }
                         this.chunk.Next();
                         break;
                     case HeaderVariableCode.DimStyle:
                         string dimStyleName = this.DecodeEncodedNonAsciiCharacters(this.chunk.ReadString());
                         if (!string.IsNullOrEmpty(dimStyleName))
+                        {
                             this.doc.DrawingVariables.DimStyle = dimStyleName;
+                        }
                         this.chunk.Next();
                         break;
                     case HeaderVariableCode.TextSize:
                         double size = this.chunk.ReadDouble();
                         if (size > 0.0)
+                        {
                             this.doc.DrawingVariables.TextSize = size;
+                        }
                         this.chunk.Next();
                         break;
                     case HeaderVariableCode.TextStyle:
                         string textStyleName = this.DecodeEncodedNonAsciiCharacters(this.chunk.ReadString());
                         if (!string.IsNullOrEmpty(textStyleName))
+                        {
                             this.doc.DrawingVariables.TextStyle = textStyleName;
+                        }
                         this.chunk.Next();
                         break;
                     case HeaderVariableCode.LastSavedBy:
@@ -523,41 +546,61 @@ namespace netDxf.IO
                     case HeaderVariableCode.TdCreate:
                         julian = this.chunk.ReadDouble();
                         if (julian < 1721426 || julian > 5373484)
+                        {
                             this.doc.DrawingVariables.TdCreate = DateTime.Now;
+                        }
                         else
+                        {
                             this.doc.DrawingVariables.TdCreate = DrawingTime.FromJulianCalendar(julian);
+                        }
                         this.chunk.Next();
                         break;
                     case HeaderVariableCode.TduCreate:
                         julian = this.chunk.ReadDouble();
                         if (julian < 1721426 || julian > 5373484)
+                        {
                             this.doc.DrawingVariables.TduCreate = DateTime.Now;
+                        }
                         else
+                        {
                             this.doc.DrawingVariables.TduCreate = DrawingTime.FromJulianCalendar(julian);
+                        }
                         this.chunk.Next();
                         break;
                     case HeaderVariableCode.TdUpdate:
                         julian = this.chunk.ReadDouble();
                         if (julian < 1721426 || julian > 5373484)
+                        {
                             this.doc.DrawingVariables.TdUpdate = DateTime.Now;
+                        }
                         else
+                        {
                             this.doc.DrawingVariables.TdUpdate = DrawingTime.FromJulianCalendar(julian);
+                        }
                         this.chunk.Next();
                         break;
                     case HeaderVariableCode.TduUpdate:
                         julian = this.chunk.ReadDouble();
                         if (julian < 1721426 || julian > 5373484)
+                        {
                             this.doc.DrawingVariables.TduUpdate = DateTime.Now;
+                        }
                         else
+                        {
                             this.doc.DrawingVariables.TduUpdate = DrawingTime.FromJulianCalendar(julian);
+                        }
                         this.chunk.Next();
                         break;
                     case HeaderVariableCode.TdinDwg:
                         double elapsed = this.chunk.ReadDouble();
                         if (elapsed < 0 || elapsed > TimeSpan.MaxValue.TotalDays)
+                        {
                             this.doc.DrawingVariables.TdinDwg = TimeSpan.Zero;
+                        }
                         else
+                        {
                             this.doc.DrawingVariables.TdinDwg = DrawingTime.EditingTime(elapsed);
+                        }
                         this.chunk.Next();
                         break;
                     case HeaderVariableCode.UcsOrg:
@@ -570,10 +613,23 @@ namespace netDxf.IO
                         this.doc.DrawingVariables.UcsYDir = this.ReadHeaderVector();
                         break;
                     default:
-                        // not recognized header variables will be added to the custom list
-                        if (!varName.StartsWith("$DIM", StringComparison.InvariantCultureIgnoreCase))
-                        { 
-                            // except those that correspond to the dimension style
+
+                        // avoid reading the header variables related with the current dimension style
+                        // avoid reading the $ACADMAINTVER variable the official DXF documentation says "Maintenance version number (should be ignored)"
+                        // avoid reading the $INTERFEREOBJVS and $INTERFEREVPVS variables, they are related to the visual style information that netDxf does not support
+                        // and if present in a saved DXF file they, somehow, interfere with the copying to the clipboard inside AutoCAD
+                        if (varName.StartsWith("$DIM", StringComparison.InvariantCultureIgnoreCase) ||
+                            varName.Equals("$ACADMAINTVER", StringComparison.InvariantCultureIgnoreCase) ||
+                            varName.Equals("$INTERFEREOBJVS", StringComparison.InvariantCultureIgnoreCase) ||
+                            varName.Equals("$INTERFEREVPVS", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            // some header variables have more than one entry
+                            while (this.chunk.Code != 0 && this.chunk.Code != 9)
+                                this.chunk.Next();
+                        }
+                        else 
+                        {
+                            // not recognized header variables will be added to the custom list
                             HeaderVariable variable;
                             if (this.chunk.Code == 10)
                             {
@@ -600,16 +656,12 @@ namespace netDxf.IO
                             }
 
                             //avoid duplicate custom header variables
-                            if (this.doc.DrawingVariables.ContainsCustomVariable(varName)) this.doc.DrawingVariables.RemoveCustomVariable(varName);
+                            if (this.doc.DrawingVariables.ContainsCustomVariable(varName))
+                                this.doc.DrawingVariables.RemoveCustomVariable(varName);
 
                             this.doc.DrawingVariables.AddCustomVariable(variable);
                         }
-                        else
-                        {
-                            // some header variables have more than one entry
-                            while (this.chunk.Code != 0 && this.chunk.Code != 9)
-                                this.chunk.Next();
-                        }
+
                         break;
                 }
             }
@@ -657,7 +709,9 @@ namespace netDxf.IO
             {
                 //read the class
                 do
-                    this.chunk.Next(); while (this.chunk.Code != 0);
+                {
+                    this.chunk.Next();
+                } while (this.chunk.Code != 0);
             }
         }
 
@@ -700,12 +754,17 @@ namespace netDxf.IO
                 {
                     case LinetypeSegmentType.Shape:
                         ShapeStyle shape = this.doc.GetObjectByHandle(pair.Value) as ShapeStyle;
-                        if (shape != null) ((LinetypeShapeSegment)pair.Key).Style = shape;
+                        if (shape != null)
+                        {
+                            ((LinetypeShapeSegment)pair.Key).Style = shape;
+                        }
                         break;
                     case LinetypeSegmentType.Text:
                         TextStyle style = this.doc.GetObjectByHandle(pair.Value) as TextStyle;
                         if (style != null)
+                        {
                             ((LinetypeTextSegment)pair.Key).Style = style;
+                        }
                         break;
                 }
             }
@@ -715,9 +774,13 @@ namespace netDxf.IO
             {
                 string name = pair.Key.Style.ShapeName(pair.Value);
                 if (string.IsNullOrEmpty(name))
+                {
                     remove.Add(pair.Key);
+                }
                 else
+                {
                     pair.Key.Name = name;
+                }
             }
 
             // add the pending complex line types
@@ -725,7 +788,9 @@ namespace netDxf.IO
             {
                 // remove invalid linetype shape segments
                 foreach (LinetypeSegment s in remove)
+                {
                     complexLinetype.Segments.Remove(s);
+                }
                 this.doc.Linetypes.Add(complexLinetype, false);
             }
 
@@ -778,7 +843,9 @@ namespace netDxf.IO
                     // attribute definitions might be null if an INSERT entity attribute has not been defined in the block
                     AttributeDefinition attDef;
                     if (insert.Block.AttributeDefinitions.TryGetValue(att.Tag, out attDef))
+                    {
                         att.Definition = attDef;
+                    }
                     att.Owner = insert;
                 }
                 // in the case the insert belongs to a *PaperSpace# the insert owner has not been assigned yet,
@@ -795,8 +862,10 @@ namespace netDxf.IO
                 Dimension dim = pair.Key;
                 if (pair.Value == null) continue;
                 Block block;
-                if(blocks.TryGetValue(pair.Value, out block))
+                if (blocks.TryGetValue(pair.Value, out block))
+                {
                     dim.Block = block;
+                }
             }
 
             // add the blocks to the document
@@ -804,7 +873,9 @@ namespace netDxf.IO
             // entities like MLine and Image require information that is defined AFTER the block section,
             // this is the case of the MLineStyle and ImageDefinition that are described in the objects section
             foreach (Block block in blocks.Values)
+            {
                 this.doc.Blocks.Add(block, false);
+            }
         }
 
         private void ReadEntities()
@@ -813,7 +884,9 @@ namespace netDxf.IO
 
             this.chunk.Next();
             while (this.chunk.ReadString() != DxfObjectCode.EndSection)
+            {
                 this.ReadEntity(false);
+            }
         }
 
         private void ReadObjects()
@@ -845,7 +918,9 @@ namespace netDxf.IO
                     case DxfObjectCode.ImageDefReactor:
                         ImageDefinitionReactor reactor = this.ReadImageDefReactor();
                         if (!this.imageDefReactors.ContainsKey(reactor.ImageHandle))
+                        {
                             this.imageDefReactors.Add(reactor.ImageHandle, reactor);
+                        }
                         break;
                     case DxfObjectCode.MLineStyle:
                         MLineStyle style = this.ReadMLineStyle();
@@ -858,9 +933,13 @@ namespace netDxf.IO
                     case DxfObjectCode.Layout:
                         Layout layout = this.ReadLayout();
                         if (layout.AssociatedBlock == null)
+                        {
                             this.orphanLayouts.Add(layout);
+                        }
                         else
+                        {
                             this.doc.Layouts.Add(layout, false);
+                        }
                         break;
                     case DxfObjectCode.UnderlayDgnDefinition:
                         UnderlayDgnDefinition underlayDgnDef = (UnderlayDgnDefinition) this.ReadUnderlayDefinition(UnderlayType.DGN);
@@ -876,7 +955,9 @@ namespace netDxf.IO
                         break;
                     default:
                         do
-                            this.chunk.Next(); while (this.chunk.Code != 0);
+                        {
+                            this.chunk.Next();
+                        } while (this.chunk.Code != 0);
                         break;
                 }
             }
@@ -968,7 +1049,9 @@ namespace netDxf.IO
 
             // if there are still orphan layouts add them to the list, it will create an associate block for them
             foreach (Layout orphan in this.orphanLayouts)
+            {
                 this.doc.Layouts.Add(orphan, false);
+            }
 
             // add ModelSpace layout if it does not exist
             this.doc.Layouts.Add(Layout.ModelSpace);
@@ -982,7 +1065,9 @@ namespace netDxf.IO
             {
                 //read the thumbnail image
                 do
-                    this.chunk.Next(); while (this.chunk.Code != 0);
+                {
+                    this.chunk.Next();
+                } while (this.chunk.Code != 0);
             }
         }
 
@@ -994,7 +1079,9 @@ namespace netDxf.IO
             {
                 //read the ACDSSCHEMA and ACDSRECORD, multiple entries
                 do
-                    this.chunk.Next(); while (this.chunk.Code != 0);
+                {
+                    this.chunk.Next();
+                } while (this.chunk.Code != 0);
             }
         }
 
@@ -1164,10 +1251,14 @@ namespace netDxf.IO
                         {
                             linetype.Handle = handle;
                             // complex linetypes will be added after reading the style table
-                            if(isComplex)
+                            if (isComplex)
+                            {
                                 this.complexLinetypes.Add(linetype);
+                            }
                             else
+                            {
                                 this.doc.Linetypes.Add(linetype, false);
+                            }
                         }
                         break;
                     case DxfObjectCode.TextStyleTable:
@@ -1178,9 +1269,13 @@ namespace netDxf.IO
                             style.Handle = handle;
                             TextStyle textStyle = style as TextStyle;
                             if (textStyle != null)
+                            {
                                 this.doc.TextStyles.Add(textStyle, false);
+                            }
                             else
+                            {
                                 this.doc.ShapeStyles.Add(style as ShapeStyle, false);
+                            }
                         }
                         break;
                     case DxfObjectCode.UcsTable:
@@ -1218,7 +1313,7 @@ namespace netDxf.IO
                         }                       
                         break;
                     default:
-                        this.ReadUnkownTableEntry();
+                        this.ReadUnknownTableEntry();
                         return;
                 }
             }
@@ -1247,8 +1342,9 @@ namespace netDxf.IO
                         break;
                     default:
                         if (this.chunk.Code >= 1000 && this.chunk.Code <= 1071)
+                        {
                             throw new Exception("The extended data of an entity must start with the application registry code.");
-
+                        }
                         this.chunk.Next();
                         break;
                 }
@@ -1305,7 +1401,9 @@ namespace netDxf.IO
                         break;
                     default:
                         if (this.chunk.Code >= 1000 && this.chunk.Code <= 1071)
+                        {
                             throw new Exception("The extended data of an entity must start with the application registry code.");
+                        }
 
                         this.chunk.Next();
                         break;
@@ -1336,38 +1434,62 @@ namespace netDxf.IO
                     while (records.MoveNext())
                     {
                         XDataRecord data = records.Current;
-                        if (data == null) break; // premature end
-                                                 // the record units are stored under the string "DesignCenter Data"
+                        if (data == null)
+                        {
+                            break; // premature end
+                        }
+
+                        // the record units are stored under the string "DesignCenter Data"
                         if (data.Code == XDataCode.String && string.Equals((string)data.Value, "DesignCenter Data", StringComparison.InvariantCultureIgnoreCase))
                         {
                             if (records.MoveNext())
+                            {
                                 data = records.Current;
+                            }
                             else
+                            {
                                 break; // premature end
+                            }
 
                             // all style overrides are enclosed between XDataCode.ControlString "{" and "}"
                             if (data == null) break; // premature end
                             if (data.Code != XDataCode.ControlString)
+                            {
                                 break; // premature end
+                            }
 
                             if (records.MoveNext())
+                            {
                                 data = records.Current;
+                            }
                             else
+                            {
                                 break; // premature end
+                            }
 
                             if (data == null) continue;
                             while (data.Code != XDataCode.ControlString)
                             {
                                 if (records.MoveNext())
+                                {
                                     data = records.Current;
+                                }
                                 else
+                                {
                                     break; // premature end
+                                }
 
                                 // the second 1070 code is the one that stores the block units,
                                 // it will override the first 1070 that stores the Autodesk Design Center version number
-                                if (data == null) break;  // premature end
+                                if (data == null)
+                                {
+                                    break;  // premature end
+                                }
+
                                 if (data.Code == XDataCode.Int16)
+                                {
                                     record.Units = (DrawingUnits)(short)data.Value;
+                                }
                             }
                         }
                     }
@@ -1375,7 +1497,9 @@ namespace netDxf.IO
             }
 
             if (!string.IsNullOrEmpty(pointerToLayout) && pointerToLayout != "0")
+            {
                 this.blockRecordPointerToLayout.Add(pointerToLayout, record);
+            }
 
             return record;
         }
@@ -1487,43 +1611,57 @@ namespace netDxf.IO
                     case 40:
                         dimscale = this.chunk.ReadDouble();
                         if (dimscale <= 0.0)
+                        {
                             dimscale = defaultDim.DimScaleOverall;
+                        }
                         this.chunk.Next();
                         break;
                     case 41:
                         dimasz = this.chunk.ReadDouble();
                         if (dimasz < 0.0)
+                        {
                             dimasz = defaultDim.ArrowSize;
+                        }
                         this.chunk.Next();
                         break;
                     case 42:
                         dimexo = this.chunk.ReadDouble();
                         if (dimexo < 0.0)
+                        {
                             dimexo = defaultDim.ExtLineOffset;
+                        }
                         this.chunk.Next();
                         break;
                     case 43:
                         dimdli = this.chunk.ReadDouble();
                         if (dimdli < 0.0)
+                        {
                             dimdli = defaultDim.DimBaselineSpacing;
+                        }
                         this.chunk.Next();
                         break;
                     case 44:
                         dimexe = this.chunk.ReadDouble();
                         if (dimexe < 0.0)
+                        {
                             dimexe = defaultDim.ExtLineExtend;
+                        }
                         this.chunk.Next();
                         break;
                     case 45:
                         dimrnd = this.chunk.ReadDouble();
                         if (dimrnd < 0.000001 && !MathHelper.IsZero(dimrnd, double.Epsilon))
+                        {
                             dimrnd = defaultDim.DimRoundoff;
+                        }
                         this.chunk.Next();
                         break;
                     case 46:
                         dimdle = this.chunk.ReadDouble();
                         if (dimdle < 0.0)
+                        {
                             dimdle = defaultDim.DimLineExtend;
+                        }
                         this.chunk.Next();
                         break;
                     case 47:
@@ -1585,7 +1723,9 @@ namespace netDxf.IO
                     case 140:
                         dimtxt = this.chunk.ReadDouble();
                         if (dimtxt <= 0.0)
+                        {
                             dimtxt = defaultDim.TextHeight;
+                        }
                         this.chunk.Next();
                         break;
                     case 141:
@@ -1595,20 +1735,26 @@ namespace netDxf.IO
                     case 143:
                         double dimaltf = this.chunk.ReadDouble();
                         if (dimaltf <= 0.0)
+                        {
                             dimaltf = defaultDim.AlternateUnits.Multiplier;
+                        }
                         dimensionStyleAlternateUnits.Multiplier = dimaltf;
                         this.chunk.Next();
                         break;
                     case 144:
                         dimlfac = this.chunk.ReadDouble();
                         if (MathHelper.IsZero(dimlfac))
+                        {
                             dimlfac = defaultDim.DimScaleLinear;
+                        }
                         this.chunk.Next();
                         break;
                     case 146:
                         dimtfac = this.chunk.ReadDouble();
                         if (dimtfac <= 0)
+                        {
                             dimtfac = defaultDim.TextFractionHeightScale;
+                        }
                         this.chunk.Next();
                         break;
                     case 147:
@@ -1618,7 +1764,9 @@ namespace netDxf.IO
                     case 148:
                         double dimaltrnd = this.chunk.ReadDouble();
                         if (dimaltrnd < 0.000001 && !MathHelper.IsZero(dimaltrnd, double.Epsilon))
+                        {
                             dimaltrnd = defaultDim.AlternateUnits.Roundoff;
+                        }
                         dimensionStyleAlternateUnits.Roundoff = dimaltrnd;
                         this.chunk.Next();
                         break;
@@ -1629,7 +1777,9 @@ namespace netDxf.IO
                     case 171:
                         short dimaltd = this.chunk.ReadShort();
                         if (dimaltd < 0)
+                        {
                             dimaltd = defaultDim.AlternateUnits.LengthPrecision;
+                        }
                         dimensionStyleAlternateUnits.LengthPrecision = dimaltd;
                         this.chunk.Next();
                         break;
@@ -1646,7 +1796,7 @@ namespace netDxf.IO
                         this.chunk.Next();
                         break;
                     case 175:
-                        dimsoxd = this.chunk.ReadShort() != 0;
+                        dimsoxd = this.chunk.ReadShort() == 0;
                         this.chunk.Next();
                         break;
                     case 176:
@@ -1664,19 +1814,25 @@ namespace netDxf.IO
                     case 179:
                         dimadec = this.chunk.ReadShort();
                         if (dimadec < 0)
+                        {
                             dimadec = defaultDim.AngularPrecision;
+                        }
                         this.chunk.Next();
                         break;
                     case 271:
                         dimdec = this.chunk.ReadShort();
                         if (dimdec < 0)
+                        {
                             dimdec = defaultDim.LengthPrecision;
+                        }
                         this.chunk.Next();
                         break;
                     case 272:
                         short dimtdec = this.chunk.ReadShort();
                         if (dimtdec < 0)
+                        {
                             dimtdec = defaultDim.Tolerances.Precision;
+                        }
                         tolerances.Precision = dimtdec;
                         this.chunk.Next();
                         break;
@@ -1722,7 +1878,9 @@ namespace netDxf.IO
                     case 274:
                         short dimalttd = this.chunk.ReadShort();
                         if (dimalttd < 0)
+                        {
                             dimalttd = defaultDim.Tolerances.AlternatePrecision;
+                        }
                         tolerances.AlternatePrecision = dimalttd;
                         this.chunk.Next();
                         break;
@@ -1833,7 +1991,9 @@ namespace netDxf.IO
                         break;
                     default:
                         if (this.chunk.Code >= 1000 && this.chunk.Code <= 1071)
+                        {
                             throw new Exception("The extended data of an entity must start with the application registry code.");
+                        }
 
                         this.chunk.Next();
                         break;
@@ -1949,14 +2109,20 @@ namespace netDxf.IO
             style.Tolerances.AlternateSuppressZeroFeet = supress[2];
             style.Tolerances.AlternateSuppressZeroInches = supress[3];
 
-            if (dimtol == 0 && dimlim == 0 )
+            if (dimtol == 0 && dimlim == 0)
+            {
                 style.Tolerances.DisplayMethod =  DimensionStyleTolerancesDisplayMethod.None;
+            }
             if (dimtol == 1 && dimlim == 0)
+            {
                 style.Tolerances.DisplayMethod =
                     MathHelper.IsEqual(style.Tolerances.UpperLimit, style.Tolerances.LowerLimit) ?
-                        DimensionStyleTolerancesDisplayMethod.Symmetrical : DimensionStyleTolerancesDisplayMethod.Deviation;
+                    DimensionStyleTolerancesDisplayMethod.Symmetrical : DimensionStyleTolerancesDisplayMethod.Deviation;
+            }
             if (dimtol == 0 && dimlim == 1)
+            {
                 style.Tolerances.DisplayMethod = DimensionStyleTolerancesDisplayMethod.Limits;
+            }
 
             string[] textPrefixSuffix = GetDimStylePrefixAndSuffix(dimpost, '<', '>');
             style.DimPrefix = textPrefixSuffix[0];
@@ -2105,10 +2271,14 @@ namespace netDxf.IO
                             index = Math.Abs(index);
                         }
                         if (!color.UseTrueColor)
+                        {
                             color = AciColor.FromCadIndex(index);
+                        }
                         // layer color cannot be ByLayer or ByBlock
                         if (color.IsByLayer || color.IsByBlock)
+                        {
                             color = AciColor.Default;
+                        }
                         this.chunk.Next();
                         break;
                     case 420: // the layer uses true color
@@ -2120,7 +2290,9 @@ namespace netDxf.IO
                         linetype = this.GetLinetype(linetypeName);
                         // layer linetype cannot be ByLayer or ByBlock
                         if (linetype.IsByLayer || linetype.IsByBlock)
+                        {
                             linetype = Linetype.Continuous;
+                        }
                         this.chunk.Next();
                         break;
                     case 290:
@@ -2131,7 +2303,9 @@ namespace netDxf.IO
                         lineweight = (Lineweight) this.chunk.ReadShort();
                         // layer lineweight cannot be ByLayer or ByBlock
                         if (lineweight == Lineweight.ByLayer || lineweight == Lineweight.ByBlock)
+                        {
                             lineweight = Lineweight.Default;
+                        }
                         this.chunk.Next();
                         break;
                     case 1001:
@@ -2141,13 +2315,18 @@ namespace netDxf.IO
                         break;
                     default:
                         if (this.chunk.Code >= 1000 && this.chunk.Code <= 1071)
+                        {
                             throw new Exception("The extended data of an entity must start with the application registry code.");
+                        }
                         this.chunk.Next();
                         break;
                 }
             }
 
-            if (!TableObject.IsValidName(name)) return null;
+            if (!TableObject.IsValidName(name))
+            {
+                return null;
+            }
 
             Layer layer = new Layer(name, false)
             {
@@ -2198,9 +2377,13 @@ namespace netDxf.IO
                     case 2: // line type name is case insensitive
                         name = this.chunk.ReadString();
                         if (string.Equals(name, Linetype.ByLayerName, StringComparison.OrdinalIgnoreCase))
+                        {
                             name = Linetype.ByLayerName;
+                        }
                         else if (string.Equals(name, Linetype.ByBlockName, StringComparison.OrdinalIgnoreCase))
+                        {
                             name = Linetype.ByBlockName;
+                        }
                         name = this.DecodeEncodedNonAsciiCharacters(name);
                         this.chunk.Next();
                         break;
@@ -2227,7 +2410,9 @@ namespace netDxf.IO
 
                         LinetypeSegment segment;
                         if (type == 0)
+                        {
                             segment = new LinetypeSimpleSegment(length);
+                        }
                         else
                         {
                             isComplex = true;
@@ -2243,7 +2428,9 @@ namespace netDxf.IO
                         break;
                     default:
                         if (this.chunk.Code >= 1000 && this.chunk.Code <= 1071)
+                        {
                             throw new Exception("The extended data of an entity must start with the application registry code.");
+                        }
                         this.chunk.Next();
                         break;
                 }
@@ -2252,7 +2439,10 @@ namespace netDxf.IO
             if(!TableObject.IsValidName(name)) return null;
 
             Linetype linetype = new Linetype(name, segments, description, false);
-            if (xData.Count > 0) this.hasXData.Add(linetype, xData);
+            if (xData.Count > 0)
+            {
+                this.hasXData.Add(linetype, xData);
+            }
             return linetype;
         }
 
@@ -2377,9 +2567,14 @@ namespace netDxf.IO
                     case 70:
                         int flag = this.chunk.ReadShort();
                         if ((flag & 1) == 1)
+                        {
                             isShapeStyle = true;
+                        }
+
                         if ((flag & 4) == 4)
+                        {
                             isVertical = true;
+                        }
                         this.chunk.Next();
                         break;
                     case 71:
@@ -2390,21 +2585,29 @@ namespace netDxf.IO
                             isUpsideDown = true;
                         }
                         else if (upDownBack == 2)
+                        {
                             isBackward = true;
+                        }
                         else if (upDownBack == 4)
+                        {
                             isUpsideDown = true;
+                        }
                         this.chunk.Next();
                         break;
                     case 40:
                         height = this.chunk.ReadDouble();
                         if (height < 0.0)
+                        {
                             height = 0.0;
+                        }
                         this.chunk.Next();
                         break;
                     case 41:
                         widthFactor = this.chunk.ReadDouble();
                         if (widthFactor < 0.01 || widthFactor > 100.0)
+                        {
                             widthFactor = 1.0;
+                        }
                         this.chunk.Next();
                         break;
                     case 42:
@@ -2414,18 +2617,25 @@ namespace netDxf.IO
                     case 50:
                         obliqueAngle = this.chunk.ReadDouble();
                         if (obliqueAngle < -85.0 || obliqueAngle > 85.0)
+                        {
                             obliqueAngle = 0.0;
+                        }
                         this.chunk.Next();
                         break;
                     case 1001:
                         string appId = this.DecodeEncodedNonAsciiCharacters(this.chunk.ReadString());
                         XData data = this.ReadXDataRecord(new ApplicationRegistry(appId));
-                        if (string.Equals(appId, ApplicationRegistry.DefaultName)) xDataFont = data;
+                        if (string.Equals(appId, ApplicationRegistry.DefaultName))
+                        {
+                            xDataFont = data;
+                        }
                         xData.Add(data);
                         break;
                     default:
                         if (this.chunk.Code >= 1000 && this.chunk.Code <= 1071)
+                        {
                             throw new Exception("The extended data of an entity must start with the application registry code.");
+                        }
                         this.chunk.Next();
                         break;
                 }
@@ -2435,7 +2645,10 @@ namespace netDxf.IO
             if (isShapeStyle)
             {
                 ShapeStyle shapeStyle = new ShapeStyle(Path.GetFileNameWithoutExtension(file), file, height, widthFactor, obliqueAngle);
-                if (xData.Count > 0) this.hasXData.Add(shapeStyle, xData);
+                if (xData.Count > 0)
+                {
+                    this.hasXData.Add(shapeStyle, xData);
+                }
                 return shapeStyle;
             }
 
@@ -2475,7 +2688,9 @@ namespace netDxf.IO
                     // only true type TTF fonts or compiled shape SHX fonts are allowed, the default "simplex.shx" font will be used in this case
                     if (!Path.GetExtension(file).Equals(".TTF", StringComparison.InvariantCultureIgnoreCase) &&
                         !Path.GetExtension(file).Equals(".SHX", StringComparison.InvariantCultureIgnoreCase))
+                    {
                         file = "simplex.shx";
+                    }
                 }
 
                 style = new TextStyle(name, file, false)
@@ -2490,7 +2705,9 @@ namespace netDxf.IO
 
                 if (Path.GetExtension(file).Equals(".SHX", StringComparison.InvariantCultureIgnoreCase) &&
                     Path.GetExtension(bigFont).Equals(".SHX", StringComparison.InvariantCultureIgnoreCase))
+                {
                     style.BigFont = bigFont;
+                }
             }
             else
             {
@@ -2505,7 +2722,10 @@ namespace netDxf.IO
                 };
             }
 
-            if (xData.Count > 0) this.hasXData.Add(style, xData);
+            if (xData.Count > 0)
+            {
+                this.hasXData.Add(style, xData);
+            }
 
             return style;
         }
@@ -2578,16 +2798,24 @@ namespace netDxf.IO
                         break;
                     default:
                         if (this.chunk.Code >= 1000 && this.chunk.Code <= 1071)
+                        {
                             throw new Exception("The extended data of an entity must start with the application registry code.");
+                        }
                         this.chunk.Next();
                         break;
                 }
             }
 
-            if (!TableObject.IsValidName(name)) return null;
+            if (!TableObject.IsValidName(name))
+            {
+                return null;
+            }
 
             UCS ucs = new UCS(name, origin, xDir, yDir, false) {Elevation = elevation};
-            if (xData.Count > 0) this.hasXData.Add(ucs, xData);
+            if (xData.Count > 0)
+            {
+                this.hasXData.Add(ucs, xData);
+            }
             return ucs;
         }
 
@@ -2696,7 +2924,9 @@ namespace netDxf.IO
                     case 41:
                         ratio = this.chunk.ReadDouble();
                         if (ratio <= 0)
+                        {
                             ratio = 1.0;
+                        }
                         this.chunk.Next();
                         break;
                     case 75:
@@ -2714,7 +2944,9 @@ namespace netDxf.IO
                         break;
                     default:
                         if (this.chunk.Code >= 1000 && this.chunk.Code <= 1071)
+                        {
                             throw new Exception("The extended data of an entity must start with the application registry code.");
+                        }
                         this.chunk.Next();
                         break;
                 }
@@ -2741,7 +2973,7 @@ namespace netDxf.IO
             return vport;
         }
 
-        private void ReadUnkownTableEntry()
+        private void ReadUnknownTableEntry()
         {
             do
                 this.chunk.Next();
@@ -2759,6 +2991,7 @@ namespace netDxf.IO
             BlockRecord blockRecord;
             Layer layer = Layer.Default;
             string name = string.Empty;
+            string description = String.Empty;
             string handle = string.Empty;
             string xrefFile = string.Empty;
             BlockTypeFlags type = BlockTypeFlags.None;
@@ -2774,6 +3007,10 @@ namespace netDxf.IO
                 {
                     case 1:
                         xrefFile = this.DecodeEncodedNonAsciiCharacters(this.chunk.ReadString());
+                        this.chunk.Next();
+                        break;
+                    case 4:
+                        description = this.DecodeEncodedNonAsciiCharacters(this.chunk.ReadString());
                         this.chunk.Next();
                         break;
                     case 5:
@@ -2870,6 +3107,7 @@ namespace netDxf.IO
                 block = new Block(name, xrefFile)
                 {
                     Handle = handle,
+                    Description = description,
                     Owner = blockRecord,
                     Origin = basePoint,
                     Layer = layer,
@@ -2881,6 +3119,7 @@ namespace netDxf.IO
                 block = new Block(name, null, null, false)
                 {
                     Handle = handle,
+                    Description = description,
                     Owner = blockRecord,
                     Origin = basePoint,
                     Layer = layer,
@@ -3632,7 +3871,7 @@ namespace netDxf.IO
                 Normal = normal
             };
             // since we are converting the table entity to an insert we also need to assign a new handle to the internal EndSequence
-            this.doc.NumHandles = insert.EndSequence.AsignHandle(this.doc.NumHandles);
+            this.doc.NumHandles = insert.EndSequence.AssignHandle(this.doc.NumHandles);
             insert.XData.AddRange(xData);
 
             //Vector3 ocsDirection = MathHelper.Transform(direction, normal, CoordinateSystem.World, CoordinateSystem.Object);
@@ -4073,7 +4312,7 @@ namespace netDxf.IO
         {
             DimensionStyle style = DimensionStyle.Default;
             bool showArrowhead = true;
-            LeaderPathType path = LeaderPathType.StraightLineSegements;
+            LeaderPathType path = LeaderPathType.StraightLineSegments;
             bool hasHookline = false;
             List<Vector3> wcsVertexes = null;
             AciColor lineColor = AciColor.ByLayer;
@@ -5346,7 +5585,7 @@ namespace netDxf.IO
                                 case 175: // DIMSOXD
                                     if (data.Code != XDataCode.Int16)
                                         return overrides; // premature end
-                                    overrides.Add(new DimensionStyleOverride(DimensionStyleOverrideType.FitDimLineInside, (short) data.Value != 0));
+                                    overrides.Add(new DimensionStyleOverride(DimensionStyleOverrideType.FitDimLineInside, (short) data.Value == 0));
                                     break;
                                 case 176: // DIMCLRD:
                                     if (data.Code != XDataCode.Int16)
@@ -6827,7 +7066,7 @@ namespace netDxf.IO
 
         private Spline ReadSpline()
         {
-            SplinetypeFlags flags = SplinetypeFlags.None;
+            SplineTypeFlags flags = SplineTypeFlags.None;
             Vector3 normal = Vector3.UnitZ;
             short degree = 3;
             int ctrlPointIndex = -1;
@@ -6880,7 +7119,7 @@ namespace netDxf.IO
                         this.chunk.Next();
                         break;
                     case 70:
-                        flags = (SplinetypeFlags) this.chunk.ReadShort();
+                        flags = (SplineTypeFlags) this.chunk.ReadShort();
                         this.chunk.Next();
                         break;
                     case 71:
@@ -7015,7 +7254,7 @@ namespace netDxf.IO
             }
 
             Spline entity;
-            SplineCreationMethod method = flags.HasFlag(SplinetypeFlags.FitPointCreationMethod) ? SplineCreationMethod.FitPoints : SplineCreationMethod.ControlPoints;
+            SplineCreationMethod method = flags.HasFlag(SplineTypeFlags.FitPointCreationMethod) ? SplineCreationMethod.FitPoints : SplineCreationMethod.ControlPoints;
 
             if (method == SplineCreationMethod.FitPoints && ctrlPoints.Count == 0)
             {
@@ -7030,7 +7269,7 @@ namespace netDxf.IO
             }
             else
             {
-                bool isPeriodic = flags.HasFlag(SplinetypeFlags.ClosedPeriodicSpline) || flags.HasFlag(SplinetypeFlags.Periodic);
+                bool isPeriodic = flags.HasFlag(SplineTypeFlags.ClosedPeriodicSpline) || flags.HasFlag(SplineTypeFlags.Periodic);
                 entity = new Spline(ctrlPoints, knots, degree, fitPoints, method, isPeriodic)
                 {
                     KnotTolerance = knotTolerance,
@@ -7041,13 +7280,13 @@ namespace netDxf.IO
                 };
             }
 
-            if (flags.HasFlag(SplinetypeFlags.FitChord))
+            if (flags.HasFlag(SplineTypeFlags.FitChord))
                 entity.KnotParameterization = SplineKnotParameterization.FitChord;
-            else if (flags.HasFlag(SplinetypeFlags.FitSqrtChord))
+            else if (flags.HasFlag(SplineTypeFlags.FitSqrtChord))
                 entity.KnotParameterization = SplineKnotParameterization.FitSqrtChord;
-            else if (flags.HasFlag(SplinetypeFlags.FitUniform))
+            else if (flags.HasFlag(SplineTypeFlags.FitUniform))
                 entity.KnotParameterization = SplineKnotParameterization.FitUniform;
-            else if (flags.HasFlag(SplinetypeFlags.FitCustom))
+            else if (flags.HasFlag(SplineTypeFlags.FitCustom))
                 entity.KnotParameterization = SplineKnotParameterization.FitCustom;
 
             entity.XData.AddRange(xData);
@@ -7514,12 +7753,12 @@ namespace netDxf.IO
                 dir.Z = this.chunk.ReadDouble(); // code 32
                 this.chunk.Next();
 
-                Vector3 mitter = new Vector3();
-                mitter.X = this.chunk.ReadDouble(); // code 13
+                Vector3 miter = new Vector3();
+                miter.X = this.chunk.ReadDouble(); // code 13
                 this.chunk.Next();
-                mitter.Y = this.chunk.ReadDouble(); // code 23
+                miter.Y = this.chunk.ReadDouble(); // code 23
                 this.chunk.Next();
-                mitter.Z = this.chunk.ReadDouble(); // code 33
+                miter.Z = this.chunk.ReadDouble(); // code 33
                 this.chunk.Next();
 
                 List<double>[] distances = new List<double>[numStyleElements];
@@ -7548,11 +7787,11 @@ namespace netDxf.IO
                 Matrix3 trans = MathHelper.ArbitraryAxis(normal).Transpose();
                 vertex = trans*vertex;
                 dir = trans*dir;
-                mitter = trans*mitter;
+                miter = trans*miter;
 
                 MLineVertex segment = new MLineVertex(new Vector2(vertex.X, vertex.Y),
                     new Vector2(dir.X, dir.Y),
-                    new Vector2(mitter.X, mitter.Y),
+                    new Vector2(miter.X, miter.Y),
                     distances);
 
                 elevation = vertex.Z;
@@ -7566,7 +7805,7 @@ namespace netDxf.IO
         {
             double elevation = 0.0;
             double thickness = 0.0;
-            PolylinetypeFlags flags = PolylinetypeFlags.OpenPolyline;
+            PolylineTypeFlags flags = PolylineTypeFlags.OpenPolyline;
             double constantWidth = -1.0;
             List<LwPolylineVertex> polVertexes = new List<LwPolylineVertex>();
             LwPolylineVertex v = null;
@@ -7595,7 +7834,7 @@ namespace netDxf.IO
                         this.chunk.Next();
                         break;
                     case 70:
-                        flags = (PolylinetypeFlags) this.chunk.ReadShort();
+                        flags = (PolylineTypeFlags) this.chunk.ReadShort();
                         this.chunk.Next();
                         break;
                     case 90:
@@ -7682,7 +7921,7 @@ namespace netDxf.IO
             // polyface mesh
             // polylines 2d is the old way of writing polylines the AutoCAD2000 and newer always use LwPolylines to define a 2d polyline
             // this way of reading 2d polylines is here for compatibility reasons with older DXF versions.
-            PolylinetypeFlags flags = PolylinetypeFlags.OpenPolyline;
+            PolylineTypeFlags flags = PolylineTypeFlags.OpenPolyline;
             PolylineSmoothType smoothType = PolylineSmoothType.NoSmooth;
             double elevation = 0.0;
             double thickness = 0.0;
@@ -7705,7 +7944,7 @@ namespace netDxf.IO
                         this.chunk.Next();
                         break;
                     case 70:
-                        flags = (PolylinetypeFlags) this.chunk.ReadShort();
+                        flags = (PolylineTypeFlags) this.chunk.ReadShort();
                         this.chunk.Next();
                         break;
                     case 75:
@@ -7778,11 +8017,11 @@ namespace netDxf.IO
             }
 
             EntityObject pol;
-            bool isClosed = flags.HasFlag(PolylinetypeFlags.ClosedPolylineOrClosedPolygonMeshInM);
+            bool isClosed = flags.HasFlag(PolylineTypeFlags.ClosedPolylineOrClosedPolygonMeshInM);
 
             //to avoid possible errors between the vertex type and the polyline type
             //the polyline type will decide which information to use from the read vertex
-            if (flags.HasFlag(PolylinetypeFlags.Polyline3D) || flags.HasFlag(PolylinetypeFlags.SplineFit))
+            if (flags.HasFlag(PolylineTypeFlags.Polyline3D) || flags.HasFlag(PolylineTypeFlags.SplineFit))
             {
                 List<PolylineVertex> polyline3dVertexes = new List<PolylineVertex>();
                 foreach (Vertex v in vertexes)
@@ -7804,7 +8043,7 @@ namespace netDxf.IO
                 };
                 ((Polyline) pol).EndSequence.Handle = endSequenceHandle;
             }
-            else if (flags.HasFlag(PolylinetypeFlags.PolyfaceMesh))
+            else if (flags.HasFlag(PolylineTypeFlags.PolyfaceMesh))
             {
                 //the vertex list created contains vertex and face information
                 List<PolyfaceMeshVertex> polyfaceVertexes = new List<PolyfaceMeshVertex>();
@@ -8490,12 +8729,12 @@ namespace netDxf.IO
             // read all referenced entities
             Debug.Assert(this.chunk.Code == 97, "The reference count code 97 was expected.");
             int numBoundaryObjects = this.chunk.ReadInt();
-            this.hatchContourns.Add(path, new List<string>(numBoundaryObjects));
+            this.hatchContours.Add(path, new List<string>(numBoundaryObjects));
             this.chunk.Next();
             for (int i = 0; i < numBoundaryObjects; i++)
             {
                 Debug.Assert(this.chunk.Code == 330, "The reference handle code 330 was expected.");
-                this.hatchContourns[path].Add(this.chunk.ReadString());
+                this.hatchContours[path].Add(this.chunk.ReadString());
                 this.chunk.Next();
             }
 
@@ -8688,12 +8927,12 @@ namespace netDxf.IO
             // read all referenced entities
             Debug.Assert(this.chunk.Code == 97, "The reference count code 97 was expected.");
             int numBoundaryObjects = this.chunk.ReadInt();
-            this.hatchContourns.Add(path, new List<string>(numBoundaryObjects));
+            this.hatchContours.Add(path, new List<string>(numBoundaryObjects));
             this.chunk.Next();
             for (int i = 0; i < numBoundaryObjects; i++)
             {
                 Debug.Assert(this.chunk.Code == 330, "The reference handle code 330 was expected.");
-                this.hatchContourns[path].Add(this.chunk.ReadString());
+                this.hatchContours[path].Add(this.chunk.ReadString());
                 this.chunk.Next();
             }
 
@@ -8861,7 +9100,7 @@ namespace netDxf.IO
                 double cosDelta = Math.Cos(angle*MathHelper.DegToRad);
                 delta = new Vector2(cosDelta*delta.X/patternScale + sinDelta*delta.Y/patternScale, -sinDelta*delta.X/patternScale + cosDelta*delta.Y/patternScale);
 
-                HatchPatternLineDefinition lineDefiniton = new HatchPatternLineDefinition
+                HatchPatternLineDefinition lineDefinition = new HatchPatternLineDefinition
                 {
                     Angle = angle - patternAngle,
                     Origin = origin,
@@ -8871,11 +9110,11 @@ namespace netDxf.IO
                 for (int j = 0; j < numSegments; j++)
                 {
                     // positive values means solid segments and negative values means spaces (one entry per element)
-                    lineDefiniton.DashPattern.Add(this.chunk.ReadDouble()/patternScale); // code 49
+                    lineDefinition.DashPattern.Add(this.chunk.ReadDouble()/patternScale); // code 49
                     this.chunk.Next();
                 }
 
-                lineDefinitions.Add(lineDefiniton);
+                lineDefinitions.Add(lineDefinition);
             }
 
             return lineDefinitions;
@@ -9936,14 +10175,16 @@ namespace netDxf.IO
             foreach (KeyValuePair<DxfObject, string> pair in this.entityList)
             {
                 Layout layout;
+                Block block;
                 if (pair.Value == null)
                 {
                     // the Model layout is the default in case the entity has not one defined
                     layout = this.doc.Layouts[Layout.ModelSpaceName];
+                    block = layout.AssociatedBlock;
                 }
                 else
                 {
-                    Block block = this.GetBlock(((BlockRecord) this.doc.GetObjectByHandle(pair.Value)).Name);
+                    block = this.GetBlock(((BlockRecord) this.doc.GetObjectByHandle(pair.Value)).Name);
                     layout = block.Record.Layout;
                 }
 
@@ -9951,11 +10192,17 @@ namespace netDxf.IO
                 Viewport viewport = pair.Key as Viewport;
                 if (viewport != null)
                 {
-                    // the base layout viewport has always id = 1 and we will not add it to the entities list of the document.
-                    // it is not necessary and its purpose is more related to the UI rather than a geometric object
-                    // this viewport has no graphical representation, it is the view of the paper space layout itself and it does not show the model.
-                    if (viewport.Id != 1)
+                    if (viewport.Id == 1)
+                    {
+                        // the base layout viewport has always id = 1 and we will not add it to the entities list of the document.
+                        // this viewport has no graphical representation, it is the view of the paper space layout itself and it does not show the model.
+                        layout.Viewport = viewport;
+                        layout.Viewport.Owner = block;
+                    }
+                    else
+                    {
                         this.doc.Blocks[layout.AssociatedBlock.Name].Entities.Add(viewport);
+                    }
                 }
                 else
                 {
@@ -9980,6 +10227,18 @@ namespace netDxf.IO
                 }
             }
 
+            // assign a handle to the default layout viewports in case there was no layout viewport with ID=1 in the DXF
+            foreach (Layout layout in this.doc.Layouts)
+            {
+                if (layout.Viewport == null)
+                    continue;
+
+                if (string.IsNullOrEmpty(layout.Viewport.Handle))
+                    this.doc.NumHandles = layout.Viewport.AssignHandle(this.doc.NumHandles);
+            }
+            // After loading a DXF the layouts associated blocks will be renamed to strictly follow *Paper_Space, *Paper_Space0, *Paper_Space1,... 
+            this.doc.Layouts.RenameAssociatedBlocks();
+            
             // post process viewports clipping boundaries
             foreach (KeyValuePair<Viewport, string> pair in this.viewports)
             {
@@ -9994,7 +10253,7 @@ namespace netDxf.IO
                 Hatch hatch = pair.Key;
                 foreach (HatchBoundaryPath path in pair.Value)
                 {
-                    List<string> entities = this.hatchContourns[path];
+                    List<string> entities = this.hatchContours[path];
                     foreach (string handle in entities)
                     {
                         EntityObject entity = this.doc.GetObjectByHandle(handle) as EntityObject;

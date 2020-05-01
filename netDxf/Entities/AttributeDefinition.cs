@@ -137,14 +137,14 @@ namespace netDxf.Entities
         /// <summary>
         /// Initializes a new instance of the <c>AttributeDefinition</c> class.
         /// </summary>
-        /// <param name="tag">Attribute identifier, the parameter <c>id</c> string cannot contain spaces.</param>
+        /// <param name="tag">Attribute identifier.</param>
         public AttributeDefinition(string tag)
             : this(tag, TextStyle.Default)
         {
         }
 
         /// <summary>
-        /// Initializes a new instance of the <c>AttributeDefiniton</c> class.
+        /// Initializes a new instance of the <c>AttributeDefinition</c> class.
         /// </summary>
         /// <param name="tag">Attribute identifier.</param>
         /// <param name="style">Attribute <see cref="TextStyle">text style</see>.</param>
@@ -154,9 +154,9 @@ namespace netDxf.Entities
         }
 
         /// <summary>
-        /// Initializes a new instance of the <c>AttributeDefiniton</c> class.
+        /// Initializes a new instance of the <c>AttributeDefinition</c> class.
         /// </summary>
-        /// <param name="tag">Attribute identifier, the parameter <c>id</c> string cannot contain spaces.</param>
+        /// <param name="tag">Attribute identifier.</param>
         /// <param name="textHeight">Height of the attribute definition text.</param>
         /// <param name="style">Attribute <see cref="TextStyle">text style</see>.</param>
         public AttributeDefinition(string tag, double textHeight, TextStyle style)
@@ -165,8 +165,6 @@ namespace netDxf.Entities
             if (string.IsNullOrEmpty(tag))
                 throw new ArgumentNullException(nameof(tag));
 
-            //if (tag.Contains(" "))
-            ////throw new ArgumentException("The tag string cannot contain spaces.", nameof(tag));
             this.tag = tag;
             this.flags = AttributeFlags.Visible;
             this.prompt = string.Empty;
@@ -308,6 +306,10 @@ namespace netDxf.Entities
         /// <summary>
         /// Gets the attribute identifier.
         /// </summary>
+        /// <remarks>
+        /// Even thought the official DXF documentation clearly says that the attribute definition tag cannot contain spaces,
+        /// most programs seems to allow them, but I cannot guarantee that all will behave this way.
+        /// </remarks>
         public string Tag
         {
             get { return this.tag; }
@@ -470,7 +472,7 @@ namespace netDxf.Entities
         }
 
         /// <summary>
-        /// Gets the owner of the actual dxf object.
+        /// Gets the owner of the actual DXF object.
         /// </summary>
         public new Block Owner
         {
@@ -614,7 +616,7 @@ namespace netDxf.Entities
                 }
             }
 
-            // the oblique angle is defined between -85 nad 85 degrees
+            // the oblique angle is defined between -85 and 85 degrees
             newObliqueAngle = MathHelper.NormalizeAngle(newObliqueAngle);
             if (newObliqueAngle > 180)
                 newObliqueAngle = 180 - newObliqueAngle;
@@ -627,7 +629,7 @@ namespace netDxf.Entities
             double newHeight = newVvector.Modulus() * Math.Cos(newObliqueAngle * MathHelper.DegToRad);
             newHeight = MathHelper.IsZero(newHeight) ? MathHelper.Epsilon : newHeight;
 
-            // the width factor is defined between 0.01 nad 100
+            // the width factor is defined between 0.01 and 100
             double newWidthFactor = newUvector.Modulus() / newHeight;
             if(newWidthFactor<0.01)
                 newWidthFactor = 0.01;

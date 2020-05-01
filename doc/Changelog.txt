@@ -1,5 +1,46 @@
 ## Change history
 
+### [2020/03/01]
+* Added a check for the binary data record of the extended data. It cannot exceed 127 bytes, if needed divide it into multiples XDataCode.BinaryData records.
+* Removed the scale restrictions for the complex linetype segments. Even thought I would recommend to always use values greater than zero, you might not get the desired results.
+* (fixed) Renaming Layouts associated blocks.
+
+### [2020/01/26]
+* (fixed) More issues with the transformation of Ellipse arcs.
+
+### [2020/01/07]
+* Misspelling corrections.
+* Renamed LeaderPathType.StraightLineSegements to LeaderPathType.StraightLineSegments
+
+### [2019/12/30]
+* (fixed) Issue with the start and end angles when performing symmetries in Arc entities:
+* (fixed) Issue with the start and end angles when performing symmetries in Ellipse arc entities:
+
+### [2019/12/21]
+* Additional change related to pull request #150. Force the use of the ASCII.WindowsCodePage encoding in the DxfReader class, just for cases where there was a problem reading the codepage from the file.
+
+### [2019/12/19]
+* (fixed) Error when trying to copy to clipboard inside AutoCAD for DXF files saved with netDXF that contains the header variables $INTERFEREOBJVS and $INTERFEREVPVS, since this variables refer to visual style information that netDxf does not save. This variables will not be loaded in case they appear in a DXF.
+* (fixed) After loading a DXF the layouts associated blocks will be renamed to strictly follow *Paper_Space, *Paper_Space0, *Paper_Space1,... 
+* (fixed) Transforming an ellipse might not show the correct result under special circumstances.
+
+### [2019/09/20]
+* Added the main Viewport of the Layout, that was deleted in v2.3.0.
+* The block description is now loaded and saved to the DXF.
+* (fixed) Issue when renaming layouts.
+* (fixed) Issue when removing layouts.
+
+### [2019/09/09]
+* (fixed) The LinearDimension block that represents the dimension drawing was not generated correctly. Now, the extension lines should not appear crossed under some circumstances.
+* (fixed) The MathHelper methods PointInSegment will consider the start and end points as part of the segment.
+* (fixed) The MathHelper method NormalizeAngle will not round almost zero angles automatically.
+
+### [2019/08/30]
+* (fixed) Hotfix for previous update. The DimensionStyle FitDimLineInside (DIMSOXD value) now is read correctly when it is part of a dimension style override.
+
+### [2019/08/30]
+* (fixed) The DimensionStyle FitDimLineInside (DIMSOXD value) was used incorrectly, when it was true is should be false and vice versa.
+
 ### [2019/08/16]
 * (fixed) When a Block is created form a DxfDocument or DXF file, any Hatch entity that it may contain will have its associative property set to false.
           This will avoid problems when the same entity its associated to multiple hatches, or when any of any of its paths is defined by the intersection of several entities.
@@ -35,7 +76,7 @@
 * Added properties IsBackward and IsUpsideDown to Text entity.
 * Added property to Matrix3 to access its [row,column] elements by index.
 * Added properties IsBackward and IsUpsideDown to Attribute and AttributeDefinition objects.
-* Added Tolerance TextHeigth property controls the height of the tolerance text overridden the default value defined in its style.
+* Added Tolerance TextHeight property controls the height of the tolerance text overridden the default value defined in its style.
 * Improved the way the Ellipse method PolygonalVertexes generates the points in an ellipse arc.
 * Improved the speed of the method IsValidName of the TableObject class. This will improve the overall speed of adding table objects blocks, layers, styles,... to the document; what, also, will improve the DXF loading performance.
 * The InvalidCharacters property of the TableObject class will return a char[] instead of a IReadOnlyList<string>.
