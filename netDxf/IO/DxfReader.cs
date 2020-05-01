@@ -2258,74 +2258,84 @@ namespace netDxf.IO
 
         private LinetypeSegment ReadLinetypeComplexSegment(int type, double length)
         {
-            string text = string.Empty;
-            short shapeNumber = 0;
-            string handleToStyle = string.Empty;
-            Vector2 offset = Vector2.Zero;
-            double rotation = 0.0;
-            double scale = 0.0;
-
-            // read until a new linetype segment is found or the end of the linetype definition
-            while (this.chunk.Code != 49 && this.chunk.Code != 0)
+            try
             {
-                switch (this.chunk.Code)
+                string text = string.Empty;
+                short shapeNumber = 0;
+                string handleToStyle = string.Empty;
+                Vector2 offset = Vector2.Zero;
+                double rotation = 0.0;
+                double scale = 0.0;
+
+                // read until a new linetype segment is found or the end of the linetype definition
+                while (this.chunk.Code != 49 && this.chunk.Code != 0)
                 {
-                    case 75:
-                        shapeNumber = this.chunk.ReadShort();
-                        this.chunk.Next();
-                        break;
-                    case 340:
-                        handleToStyle = this.chunk.ReadString();
-                        this.chunk.Next();
-                        break;
-                    case 46:
-                        scale = this.chunk.ReadDouble();
-                        this.chunk.Next();
-                        break;
-                    case 50:
-                        rotation = this.chunk.ReadDouble();
-                        this.chunk.Next();
-                        break;
-                    case 44:
-                        offset.X = this.chunk.ReadDouble();
-                        this.chunk.Next();
-                        break;
-                    case 45:
-                        offset.Y = this.chunk.ReadDouble();
-                        this.chunk.Next();
-                        break;
-                    case 9:
-                        text = this.DecodeEncodedNonAsciiCharacters(this.chunk.ReadString());
-                        this.chunk.Next();
-                        break;
-                    default:
-                        this.chunk.Next();
-                        break;
+                    switch (this.chunk.Code)
+                    {
+                        case 75:
+                            shapeNumber = this.chunk.ReadShort();
+                            this.chunk.Next();
+                            break;
+                        case 340:
+                            handleToStyle = this.chunk.ReadString();
+                            this.chunk.Next();
+                            break;
+                        case 46:
+                            scale = this.chunk.ReadDouble();
+                            this.chunk.Next();
+                            break;
+                        case 50:
+                            rotation = this.chunk.ReadDouble();
+                            this.chunk.Next();
+                            break;
+                        case 44:
+                            offset.X = this.chunk.ReadDouble();
+                            this.chunk.Next();
+                            break;
+                        case 45:
+                            offset.Y = this.chunk.ReadDouble();
+                            this.chunk.Next();
+                            break;
+                        case 9:
+                            text = this.DecodeEncodedNonAsciiCharacters(this.chunk.ReadString());
+                            this.chunk.Next();
+                            break;
+                        default:
+                            this.chunk.Next();
+                            break;
+                    }
                 }
-            }
 
-            if (string.IsNullOrEmpty(handleToStyle))
+                if (string.IsNullOrEmpty(handleToStyle))
+                    return null;
+
+                LinetypeSegment segment;
+                LinetypeSegmentRotationType rt = (type & 1) == 1
+                    ? LinetypeSegmentRotationType.Absolute
+                    : LinetypeSegmentRotationType.Relative;
+                if ((type & 2) == 2)
+                {
+                    segment = new LinetypeTextSegment(text, TextStyle.Default, length, offset, rt, rotation, scale);
+                }
+                else if ((type & 4) == 4)
+                {
+                    segment = new LinetypeShapeSegment("NOSHAPE", ShapeStyle.Default, length, offset, rt, rotation,
+                        scale);
+                    this.linetypeShapeSegmentToNumber.Add((LinetypeShapeSegment) segment, shapeNumber);
+                }
+                else
+                {
+                    return null;
+                }
+
+                this.linetypeSegmentStyleHandles.Add(segment, handleToStyle);
+
+                return segment;
+            }
+            catch (Exception)
+            {
                 return null;
-
-            LinetypeSegment segment;
-            LinetypeSegmentRotationType rt = (type & 1) == 1 ? LinetypeSegmentRotationType.Absolute : LinetypeSegmentRotationType.Relative;
-            if ((type & 2) == 2)
-            {
-                segment = new LinetypeTextSegment(text, TextStyle.Default, length, offset, rt, rotation, scale);
             }
-            else if ((type & 4) == 4)
-            {
-                segment = new LinetypeShapeSegment("NOSHAPE", ShapeStyle.Default, length, offset, rt, rotation, scale);
-                this.linetypeShapeSegmentToNumber.Add((LinetypeShapeSegment) segment, shapeNumber);
-            }
-            else
-            {
-                return null;
-            }
-
-            this.linetypeSegmentStyleHandles.Add(segment, handleToStyle);
-            
-            return segment;
         }
 
         private DxfObject ReadTextStyle()
